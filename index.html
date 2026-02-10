@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#030712">
+<title>NB Pricing Engine</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTkIgUHJpY2luZyBFbmdpbmUiLCJzaG9ydF9uYW1lIjoiTkIgUHJpY2luZyIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMDMwNzEyIiwidGhlbWVfY29sb3IiOiIjMDMwNzEyIn0=">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #030712;
+  --bg-card: #0a0f1e;
+  --bg-elevated: #111827;
+  --border: #1e293b;
+  --border-active: #3b82f6;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-violet: #8b5cf6;
+  --accent-rose: #f43f5e;
+  --accent-amber: #f59e0b;
+  --accent-emerald: #10b981;
+  --gradient-brand: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  --gradient-price: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Outfit', -apple-system, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Noise texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
+
+/* ===== HEADER ===== */
+.header { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+.header-logo {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--gradient-brand);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px;
+  color: #fff; letter-spacing: -0.5px;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25);
+}
+.header-text h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.header-text span { font-size: 10px; color: var(--text-muted); letter-spacing: 2.5px; text-transform: uppercase; }
+
+/* ===== PROGRESS ===== */
+.progress { display: flex; gap: 4px; margin-bottom: 32px; }
+.progress-item { flex: 1; }
+.progress-bar { height: 3px; border-radius: 2px; background: var(--bg-elevated); transition: background 0.5s; }
+.progress-bar.active { background: var(--gradient-brand); }
+.progress-label {
+  font-size: 9px; letter-spacing: 1px; text-transform: uppercase; margin-top: 6px;
+  color: var(--text-muted); transition: color 0.3s;
+}
+.progress-label.active { color: var(--text-secondary); }
+
+/* ===== STEP CONTAINER ===== */
+.step { animation: stepIn 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes stepIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.step-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+.step-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.5; }
+
+/* ===== FORM ELEMENTS ===== */
+.field-label {
+  font-size: 10px; color: var(--text-muted); letter-spacing: 2px;
+  text-transform: uppercase; display: block; margin-bottom: 10px; font-weight: 500;
+}
+
+.text-input {
+  width: 100%; background: var(--bg-card); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px; color: var(--text-primary);
+  font-family: inherit; font-size: 15px; outline: none; transition: border-color 0.2s;
+}
+.text-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.text-input::placeholder { color: var(--text-muted); }
+
+textarea.text-input { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+/* ===== SEGMENT CARDS ===== */
+.segment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.segment-card {
+  padding: 16px 14px; border-radius: var(--radius); cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--bg-card);
+  transition: all 0.25s; position: relative; overflow: hidden;
+}
+.segment-card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--seg-color); opacity: 0; transition: opacity 0.3s;
+}
+.segment-card.active { border-color: var(--seg-color); }
+.segment-card.active::after { opacity: 1; }
+.segment-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; transition: color 0.2s; }
+.segment-card.active .segment-name { color: var(--seg-color); }
+.segment-detail { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+.segment-price { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+/* ===== SIGNAL CHIPS ===== */
+.signal-section { margin-bottom: 24px; }
+.signal-section-title {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.3px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.signal-chip {
+  display: flex; align-items: center; gap: 10px; padding: 13px 14px;
+  border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+  background: var(--bg-card); cursor: pointer; transition: all 0.2s;
+  margin-bottom: 8px; user-select: none;
+}
+.signal-chip:active { transform: scale(0.98); }
+.signal-chip.active { border-color: var(--chip-color); background: color-mix(in srgb, var(--chip-color) 6%, var(--bg-card)); }
+.signal-chip .icon { font-size: 16px; flex-shrink: 0; }
+.signal-chip .label { flex: 1; font-size: 13px; color: var(--text-secondary); }
+.signal-chip.active .label { color: var(--text-primary); }
+.signal-chip .points {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+  color: var(--chip-color); opacity: 0.7;
+}
+.signal-chip.active .points { opacity: 1; }
+
+/* ===== GAUGE ===== */
+.gauge { margin-bottom: 14px; }
+.gauge-header { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; }
+.gauge-label { color: var(--text-muted); }
+.gauge-value { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+.gauge-track { height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; }
+.gauge-fill { height: 100%; border-radius: 3px; transition: width 0.5s cubic-bezier(0.16,1,0.3,1); }
+
+.score-box {
+  background: var(--bg-card); border-radius: var(--radius); padding: 20px;
+  border: 1px solid var(--border); margin-top: 20px;
+}
+.score-total {
+  display: flex; justify-content: space-between; align-items: center;
+  border-top: 1px solid var(--border); padding-top: 14px; margin-top: 10px;
+}
+.score-total-label { font-size: 14px; font-weight: 600; }
+.score-total-value { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; }
+
+/* ===== LAB PROFILES ===== */
+.lab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lab-card {
+  padding: 14px; border-radius: var(--radius); cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--bg-card);
+  transition: all 0.25s;
+}
+.lab-card.active { border-color: var(--accent-violet); background: rgba(139,92,246,0.04); }
+.lab-card-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.lab-card.active .lab-card-name { color: var(--accent-violet); }
+.lab-card-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+/* ===== MULTIPLIER ===== */
+.mult-total {
+  background: var(--bg-card); border-radius: var(--radius); padding: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  border: 1px solid var(--border); margin-top: 20px;
+}
+.mult-total-label { font-size: 13px; color: var(--text-secondary); }
+.mult-total-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; }
+
+/* ===== RESULT ===== */
+.result-card {
+  background: linear-gradient(160deg, var(--bg-card) 0%, #0d1530 100%);
+  border-radius: 20px; padding: 32px 24px; border: 1px solid var(--border);
+  box-shadow: var(--shadow-glow); margin-bottom: 20px; position: relative; overflow: hidden;
+}
+.result-card::before {
+  content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+.result-client { text-align: center; margin-bottom: 28px; position: relative; }
+.result-client-label { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+.result-client-name { font-size: 20px; font-weight: 700; }
+.result-segment-badge {
+  display: inline-block; margin-top: 10px; padding: 4px 14px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+}
+
+.result-price-section { text-align: center; margin-bottom: 20px; position: relative; }
+.result-price-label { font-size: 10px; letter-spacing: 2px; margin-bottom: 6px; }
+.result-price-sub { font-family: 'JetBrains Mono', monospace; font-size: 17px; color: var(--text-secondary); }
+
+.result-price-main {
+  text-align: center; padding: 28px 20px; margin-bottom: 24px;
+  background: linear-gradient(135deg, rgba(6,182,212,0.06), rgba(59,130,246,0.06), rgba(139,92,246,0.06));
+  border-radius: 16px; border: 1px solid rgba(99,102,241,0.15);
+  position: relative;
+}
+.result-price-main-label { font-size: 10px; color: var(--accent-violet); letter-spacing: 2.5px; margin-bottom: 10px; }
+.result-price-main-value {
+  font-family: 'JetBrains Mono', monospace; font-size: 38px; font-weight: 700;
+  background: var(--gradient-price); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.result-price-main-ht { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+.result-metrics {
+  display: flex; justify-content: center; gap: 28px;
+  border-top: 1px solid var(--border); padding-top: 22px; position: relative;
+}
+.result-metric { text-align: center; }
+.result-metric-label { font-size: 9px; color: var(--text-muted); letter-spacing: 1.5px; margin-bottom: 4px; }
+.result-metric-value { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; }
+
+/* ===== INFO CARDS (benchmark, LAB, notes) ===== */
+.info-card {
+  background: var(--bg-card); border-radius: var(--radius); padding: 22px;
+  border: 1px solid var(--border); margin-bottom: 14px;
+}
+.info-card-title {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.3px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.info-card-text { font-size: 13px; color: var(--text-secondary); line-height: 1.75; }
+
+/* ===== WEBHOOK CONFIG ===== */
+.webhook-section {
+  background: var(--bg-card); border-radius: var(--radius); padding: 20px;
+  border: 1px solid var(--border); margin-bottom: 20px;
+}
+.webhook-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.webhook-section p { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+.webhook-row { display: flex; gap: 8px; }
+.webhook-row .text-input { flex: 1; font-size: 13px; padding: 12px 14px; }
+
+.webhook-status {
+  display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+  border-radius: var(--radius-sm); font-size: 13px; margin-top: 12px;
+}
+.webhook-status.success { background: rgba(16,185,129,0.08); color: var(--accent-emerald); border: 1px solid rgba(16,185,129,0.2); }
+.webhook-status.error { background: rgba(244,63,94,0.08); color: var(--accent-rose); border: 1px solid rgba(244,63,94,0.2); }
+.webhook-status.loading { background: rgba(59,130,246,0.08); color: var(--accent-blue); border: 1px solid rgba(59,130,246,0.2); }
+
+/* ===== BUTTONS ===== */
+.btn-row { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
+.btn {
+  padding: 14px 24px; border-radius: 12px; font-family: inherit; font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; letter-spacing: 0.2px;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--gradient-brand); color: #fff; box-shadow: 0 4px 16px rgba(59,130,246,0.2); }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-secondary { background: transparent; border: 1.5px solid var(--border); color: var(--text-secondary); }
+.btn-success { background: linear-gradient(135deg, #059669, #10b981); color: #fff; }
+.btn-copy { background: var(--bg-elevated); border: 1.5px solid var(--border); color: var(--text-primary); }
+.btn-full { width: 100%; justify-content: center; display: flex; align-items: center; gap: 8px; }
+
+.btn-icon { font-size: 16px; }
+
+/* Responsive tweaks */
+@media (max-width: 380px) {
+  .segment-grid, .lab-grid { grid-template-columns: 1fr; }
+  .result-price-main-value { font-size: 30px; }
+  .result-metrics { gap: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app"></div>
+
+<script>
+// ===== DATA =====
+const SEGMENTS = [
+  { id: "pme", label: "PME", caRange: "CA < 10M€", effectif: "< 50 sal.", min: 15000, max: 25000, color: "#10b981" },
+  { id: "eti", label: "ETI / PME Mature", caRange: "CA 10-50M€", effectif: "50-250 sal.", min: 25000, max: 40000, color: "#06b6d4" },
+  { id: "scaleup", label: "Scale-up / Tech", caRange: "Levées / Hypergrowth", effectif: "100-500 sal.", min: 40000, max: 65000, color: "#8b5cf6" },
+  { id: "grand", label: "Grand Groupe", caRange: "CA > 100M€", effectif: "> 500 sal.", min: 65000, max: 120000, color: "#f43f5e" },
+];
+
+const URGENCY_SIGNALS = [
+  { id: "turnover", label: "Turnover élevé au CODIR", points: 3, icon: "🔴" },
+  { id: "conflit", label: "Conflit ouvert mentionné", points: 3, icon: "🔴" },
+  { id: "fusion", label: "Post-acquisition / Fusion", points: 3, icon: "🔴" },
+  { id: "deja_essaye", label: "\"On a déjà essayé des choses\"", points: 2, icon: "🟠" },
+  { id: "urgence_verbale", label: "Urgence exprimée verbalement", points: 2, icon: "🟠" },
+];
+
+const APPETITE_SIGNALS = [
+  { id: "proactif", label: "Profil LAB Proactif du décideur", points: 2, icon: "🧠" },
+  { id: "vocab_qvt", label: "Vocabulaire QVT / Valeurs spontané", points: 2, icon: "🧠" },
+  { id: "references", label: "Demande de références / cas concrets", points: 1, icon: "💡" },
+  { id: "budget_structure", label: "Budget formation structuré / OPCO", points: 2, icon: "💡" },
+  { id: "interne_sensible", label: "Partage d'infos internes sensibles", points: 1, icon: "💡" },
+];
+
+const ENGAGEMENT_SIGNALS = [
+  { id: "dg_present", label: "Présence du DG ou N+1 au RDV", points: 1, icon: "✅" },
+  { id: "questions_methodo", label: "Questions sur la méthodologie", points: 1, icon: "✅" },
+  { id: "calendrier_rapide", label: "Demande de calendrier rapide", points: 2, icon: "🚀" },
+  { id: "multi_interlocuteurs", label: "Plusieurs interlocuteurs mobilisés", points: 1, icon: "✅" },
+];
+
+const MULTIPLIERS = [
+  { id: "budget_formation", label: "Budget formation > 1% masse salariale", value: 1.15, icon: "📈" },
+  { id: "multi_codir", label: "Plusieurs CODIR / BU concernés", value: 1.25, icon: "📈" },
+  { id: "residenciel", label: "Format résidentiel souhaité", value: 1.20, icon: "📈" },
+  { id: "duree_longue", label: "Programme > 6 mois", value: 1.15, icon: "📈" },
+];
+
+const LAB_PROFILES = [
+  { id: "proactif", label: "Proactif", effect: "high", desc: "Veut agir vite → prix haut justifié" },
+  { id: "reactif", label: "Réactif", effect: "low", desc: "Attend de voir → prudence sur le prix" },
+  { id: "interne", label: "Réf. Interne", effect: "neutral", desc: "Décide seul → argumenter ROI" },
+  { id: "externe", label: "Réf. Externe", effect: "high", desc: "Sensible aux benchmarks marché" },
+  { id: "global", label: "Global", effect: "high", desc: "Vision large → package premium" },
+  { id: "specifique", label: "Spécifique", effect: "neutral", desc: "Veut du détail → décomposer le prix" },
+];
+
+const BENCHMARKS = {
+  pme: "Coaching CODIR en PME : le marché se situe entre 15k et 30k€ HT pour un programme de 3 à 6 mois (Sources : ICF 2023, Syntec Conseil 2024). ROI moyen constaté : 5,7× l'investissement.",
+  eti: "Accompagnement CODIR en ETI : les programmes sur 6 à 12 mois se facturent entre 20k et 36k€ HT, séminaires collectifs et entretiens individuels inclus (Source : Acteo 2025).",
+  scaleup: "Scale-ups tech : les programmes de transformation CODIR atteignent 25k à 65k€ HT en format résidentiel, justifiés par l'hypergrowth et la complexité organisationnelle.",
+  grand: "Grands groupes (+500 sal.) : accompagnements CODIR complets de 50k à 120k€+ HT. Une journée de séminaire avec un coach réputé coûte entre 3 500 et 6 000€ HT.",
+};
+
+const LAB_ADVICE = {
+  proactif: "Décideur Proactif → Présentez le prix comme un investissement d'action immédiate. « Voici ce qu'on lance dès le mois prochain. » Prix ferme, planning serré.",
+  reactif: "Décideur Réactif → Proposez un diagnostic ou une phase pilote d'abord. Laissez-le « voir les résultats » avant de monter. Évitez la pression.",
+  interne: "Référence Interne → Donnez-lui les chiffres ROI et laissez-le conclure. Ne surargumentez pas. Présentez les faits et le benchmark marché.",
+  externe: "Référence Externe → Appuyez-vous sur témoignages, cas clients, benchmarks. « Les entreprises de votre taille investissent entre X et Y. »",
+  global: "Profil Global → Présentez le package complet et la vision d'ensemble. Ne détaillez pas chaque ligne, montrez l'impact global. Prix premium justifié.",
+  specifique: "Profil Spécifique → Décomposez le prix : sessions, coût/participant, livrables. Il veut comprendre chaque euro. Devis détaillé ligne par ligne.",
+};
+
+// ===== STATE =====
+const state = {
+  step: 0,
+  clientName: "",
+  segment: null,
+  urgency: [],
+  appetite: [],
+  engagement: [],
+  multipliers: [],
+  labProfile: null,
+  notes: "",
+  webhookUrl: localStorage.getItem("nb_webhook_url") || "",
+  webhookStatus: null,
+};
+
+// ===== HELPERS =====
+const formatPrice = n => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+
+function calcScores() {
+  const urgencyScore = URGENCY_SIGNALS.filter(s => state.urgency.includes(s.id)).reduce((a, s) => a + s.points, 0);
+  const appetiteScore = APPETITE_SIGNALS.filter(s => state.appetite.includes(s.id)).reduce((a, s) => a + s.points, 0);
+  const engagementScore = ENGAGEMENT_SIGNALS.filter(s => state.engagement.includes(s.id)).reduce((a, s) => a + s.points, 0);
+  const total = urgencyScore + appetiteScore + engagementScore;
+  const max = 13 + 8 + 5;
+  return { urgencyScore, appetiteScore, engagementScore, total, max };
+}
+
+function calcMultiplier() {
+  return MULTIPLIERS.filter(m => state.multipliers.includes(m.id)).reduce((a, m) => a * m.value, 1.0);
+}
+
+function calcLabAdjust() {
+  if (!state.labProfile) return 1.0;
+  const p = LAB_PROFILES.find(l => l.id === state.labProfile);
+  return p.effect === "high" ? 1.05 : p.effect === "low" ? 0.95 : 1.0;
+}
+
+function calcPriceRange() {
+  const seg = SEGMENTS.find(s => s.id === state.segment);
+  if (!seg) return null;
+  const { total, max } = calcScores();
+  const ratio = total / max;
+  const base = seg.min + (seg.max - seg.min) * ratio;
+  const adjusted = base * calcMultiplier() * calcLabAdjust();
+  return {
+    low: Math.round(adjusted * 0.9 / 500) * 500,
+    target: Math.round(adjusted / 500) * 500,
+    high: Math.round(adjusted * 1.15 / 500) * 500,
+  };
+}
+
+function toggle(arr, id) {
+  const idx = arr.indexOf(id);
+  if (idx === -1) arr.push(id); else arr.splice(idx, 1);
+}
+
+// ===== RENDER =====
+function render() {
+  const app = document.getElementById("app");
+  const steps = ["Client", "Signaux", "LAB Profile", "Multiplicateurs", "Résultat"];
+
+  let html = `
+    <div class="header">
+      <div class="header-logo">NB</div>
+      <div class="header-text">
+        <h1>PRICING ENGINE</h1>
+        <span>NB Next Step — v1.0</span>
+      </div>
+    </div>
+    <div class="progress">
+      ${steps.map((s, i) => `
+        <div class="progress-item">
+          <div class="progress-bar ${i <= state.step ? 'active' : ''}"></div>
+          <div class="progress-label ${i <= state.step ? 'active' : ''}">${s}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+
+  // STEP 0 — Client
+  if (state.step === 0) {
+    html += `<div class="step">
+      <div class="step-title">Identification client</div>
+      <div class="step-subtitle">Renseignez le prospect et sélectionnez son segment</div>
+      
+      <label class="field-label">Nom du client / Entreprise</label>
+      <input class="text-input" id="clientName" value="${state.clientName}" placeholder="Ex: Brevo, PeersGroup, Watchfrog...">
+      
+      <label class="field-label" style="margin-top:24px">Segment entreprise</label>
+      <div class="segment-grid">
+        ${SEGMENTS.map(seg => `
+          <div class="segment-card ${state.segment === seg.id ? 'active' : ''}" style="--seg-color:${seg.color}" onclick="state.segment='${seg.id}';render()">
+            <div class="segment-name">${seg.label}</div>
+            <div class="segment-detail">${seg.caRange} · ${seg.effectif}</div>
+            <div class="segment-price">${formatPrice(seg.min)} — ${formatPrice(seg.max)}</div>
+          </div>
+        `).join("")}
+      </div>
+      
+      <div class="btn-row" style="justify-content:flex-end">
+        <button class="btn btn-primary" ${!state.segment || !state.clientName ? 'disabled' : ''} onclick="state.step=1;render()">Suivant →</button>
+      </div>
+    </div>`;
+  }
+
+  // STEP 1 — Signals
+  else if (state.step === 1) {
+    const { urgencyScore, appetiteScore, engagementScore, total, max } = calcScores();
+    const confColor = total >= 18 ? "#10b981" : total >= 12 ? "#06b6d4" : total >= 6 ? "#f59e0b" : "#f43f5e";
+
+    html += `<div class="step">
+      <div class="step-title">Signaux d'entretien</div>
+      <div class="step-subtitle">Cochez les signaux détectés pendant ou après l'entretien</div>
+      
+      <div class="signal-section">
+        <div class="signal-section-title" style="color:#f43f5e">🔥 URGENCE / DOULEUR</div>
+        ${URGENCY_SIGNALS.map(s => `
+          <div class="signal-chip ${state.urgency.includes(s.id) ? 'active' : ''}" style="--chip-color:#f43f5e" onclick="toggle(state.urgency,'${s.id}');render()">
+            <span class="icon">${s.icon}</span>
+            <span class="label">${s.label}</span>
+            <span class="points">+${s.points}</span>
+          </div>
+        `).join("")}
+      </div>
+      
+      <div class="signal-section">
+        <div class="signal-section-title" style="color:#06b6d4">🧠 MATURITÉ / APPÉTENCE</div>
+        ${APPETITE_SIGNALS.map(s => `
+          <div class="signal-chip ${state.appetite.includes(s.id) ? 'active' : ''}" style="--chip-color:#06b6d4" onclick="toggle(state.appetite,'${s.id}');render()">
+            <span class="icon">${s.icon}</span>
+            <span class="label">${s.label}</span>
+            <span class="points">+${s.points}</span>
+          </div>
+        `).join("")}
+      </div>
+      
+      <div class="signal-section">
+        <div class="signal-section-title" style="color:#10b981">✅ ENGAGEMENT</div>
+        ${ENGAGEMENT_SIGNALS.map(s => `
+          <div class="signal-chip ${state.engagement.includes(s.id) ? 'active' : ''}" style="--chip-color:#10b981" onclick="toggle(state.engagement,'${s.id}');render()">
+            <span class="icon">${s.icon}</span>
+            <span class="label">${s.label}</span>
+            <span class="points">+${s.points}</span>
+          </div>
+        `).join("")}
+      </div>
+      
+      <div class="score-box">
+        <div class="gauge">
+          <div class="gauge-header"><span class="gauge-label">Urgence</span><span class="gauge-value" style="color:#f43f5e">${urgencyScore}/13</span></div>
+          <div class="gauge-track"><div class="gauge-fill" style="width:${(urgencyScore/13)*100}%;background:#f43f5e"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-header"><span class="gauge-label">Appétence</span><span class="gauge-value" style="color:#06b6d4">${appetiteScore}/8</span></div>
+          <div class="gauge-track"><div class="gauge-fill" style="width:${(appetiteScore/8)*100}%;background:#06b6d4"></div></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-header"><span class="gauge-label">Engagement</span><span class="gauge-value" style="color:#10b981">${engagementScore}/5</span></div>
+          <div class="gauge-track"><div class="gauge-fill" style="width:${(engagementScore/5)*100}%;background:#10b981"></div></div>
+        </div>
+        <div class="score-total">
+          <span class="score-total-label">Score total</span>
+          <span class="score-total-value" style="color:${confColor}">${total}/${max}</span>
+        </div>
+      </div>
+      
+      <div class="btn-row" style="justify-content:space-between">
+        <button class="btn btn-secondary" onclick="state.step=0;render()">← Retour</button>
+        <button class="btn btn-primary" onclick="state.step=2;render()">Suivant →</button>
+      </div>
+    </div>`;
+  }
+
+  // STEP 2 — LAB Profile
+  else if (state.step === 2) {
+    html += `<div class="step">
+      <div class="step-title">Profil LAB dominant</div>
+      <div class="step-subtitle">Quel métaprogramme dominant avez-vous détecté chez le décideur ?</div>
+      
+      <div class="lab-grid">
+        ${LAB_PROFILES.map(l => `
+          <div class="lab-card ${state.labProfile === l.id ? 'active' : ''}" onclick="state.labProfile='${l.id}';render()">
+            <div class="lab-card-name">${l.label}</div>
+            <div class="lab-card-desc">${l.desc}</div>
+          </div>
+        `).join("")}
+      </div>
+      
+      <label class="field-label" style="margin-top:28px">Notes d'entretien (optionnel)</label>
+      <textarea class="text-input" id="notes" placeholder="Observations, verbatims clés, contexte particulier...">${state.notes}</textarea>
+      
+      <div class="btn-row" style="justify-content:space-between">
+        <button class="btn btn-secondary" onclick="state.step=1;render()">← Retour</button>
+        <button class="btn btn-primary" onclick="state.step=3;render()">Suivant →</button>
+      </div>
+    </div>`;
+  }
+
+  // STEP 3 — Multipliers
+  else if (state.step === 3) {
+    const mult = calcMultiplier();
+    html += `<div class="step">
+      <div class="step-title">Multiplicateurs</div>
+      <div class="step-subtitle">Facteurs qui justifient un ajustement à la hausse</div>
+      
+      ${MULTIPLIERS.map(m => `
+        <div class="signal-chip ${state.multipliers.includes(m.id) ? 'active' : ''}" style="--chip-color:#f59e0b" onclick="toggle(state.multipliers,'${m.id}');render()">
+          <span class="icon">${m.icon}</span>
+          <span class="label">${m.label}</span>
+          <span class="points">×${m.value.toFixed(2)}</span>
+        </div>
+      `).join("")}
+      
+      <div class="mult-total">
+        <span class="mult-total-label">Multiplicateur total</span>
+        <span class="mult-total-value" style="color:${mult > 1 ? '#f59e0b' : 'var(--text-muted)'}">×${mult.toFixed(2)}</span>
+      </div>
+      
+      <div class="btn-row" style="justify-content:space-between">
+        <button class="btn btn-secondary" onclick="state.step=2;render()">← Retour</button>
+        <button class="btn btn-primary" onclick="state.step=4;render()">Voir le prix →</button>
+      </div>
+    </div>`;
+  }
+
+  // STEP 4 — Result
+  else if (state.step === 4) {
+    const seg = SEGMENTS.find(s => s.id === state.segment);
+    const prices = calcPriceRange();
+    const { total, max } = calcScores();
+    const mult = calcMultiplier();
+    const confLevel = total >= 18 ? "Très élevée" : total >= 12 ? "Élevée" : total >= 6 ? "Moyenne" : "Faible";
+    const confColor = total >= 18 ? "#10b981" : total >= 12 ? "#06b6d4" : total >= 6 ? "#f59e0b" : "#f43f5e";
+
+    html += `<div class="step">
+      <div class="result-card">
+        <div class="result-client">
+          <div class="result-client-label">Prix recommandé pour</div>
+          <div class="result-client-name">${state.clientName}</div>
+          <div class="result-segment-badge" style="background:${seg.color}15;color:${seg.color}">${seg.label} · ${seg.caRange}</div>
+        </div>
+        
+        <div class="result-price-section">
+          <div class="result-price-label" style="color:var(--text-muted)">FOURCHETTE BASSE</div>
+          <div class="result-price-sub">${formatPrice(prices.low)} HT</div>
+        </div>
+        
+        <div class="result-price-main">
+          <div class="result-price-main-label">💎 PRIX CIBLE</div>
+          <div class="result-price-main-value">${formatPrice(prices.target)}</div>
+          <div class="result-price-main-ht">HT</div>
+        </div>
+        
+        <div class="result-price-section">
+          <div class="result-price-label" style="color:var(--text-muted)">FOURCHETTE HAUTE</div>
+          <div class="result-price-sub">${formatPrice(prices.high)} HT</div>
+        </div>
+        
+        <div class="result-metrics">
+          <div class="result-metric">
+            <div class="result-metric-label">SCORE</div>
+            <div class="result-metric-value" style="color:${confColor}">${total}/${max}</div>
+          </div>
+          <div class="result-metric">
+            <div class="result-metric-label">CONFIANCE</div>
+            <div class="result-metric-value" style="color:${confColor};font-size:13px">${confLevel}</div>
+          </div>
+          <div class="result-metric">
+            <div class="result-metric-label">MULTIPLICATEUR</div>
+            <div class="result-metric-value" style="color:#f59e0b">×${mult.toFixed(2)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="info-card">
+        <div class="info-card-title" style="color:var(--text-secondary)">📊 Benchmark marché</div>
+        <div class="info-card-text">${BENCHMARKS[state.segment]}</div>
+      </div>
+      
+      ${state.labProfile ? `
+      <div class="info-card">
+        <div class="info-card-title" style="color:var(--accent-violet)">🧠 Conseil LAB Profile</div>
+        <div class="info-card-text">${LAB_ADVICE[state.labProfile]}</div>
+      </div>` : ""}
+      
+      ${state.notes ? `
+      <div class="info-card">
+        <div class="info-card-title" style="color:var(--text-muted)">📝 Notes d'entretien</div>
+        <div class="info-card-text">${state.notes}</div>
+      </div>` : ""}
+      
+      <!-- Webhook section -->
+      <div class="webhook-section">
+        <h3>🔗 Envoyer vers Notion</h3>
+        <p>Collez votre URL webhook Make pour synchroniser automatiquement avec votre base Notion</p>
+        <div class="webhook-row">
+          <input class="text-input" id="webhookUrl" value="${state.webhookUrl}" placeholder="https://hook.eu2.make.com/...">
+          <button class="btn btn-success" onclick="saveWebhook()" style="white-space:nowrap;padding:12px 18px;font-size:13px">Sauver</button>
+        </div>
+        ${state.webhookUrl ? `
+        <button class="btn btn-success btn-full" style="margin-top:12px" onclick="sendToNotion()">
+          <span class="btn-icon">🚀</span> Envoyer vers Notion
+        </button>` : ""}
+        <div id="webhookStatus"></div>
+      </div>
+      
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="state.step=0;render()">← Modifier</button>
+        <button class="btn btn-secondary" onclick="resetAll()">🔄 Nouveau</button>
+        <button class="btn btn-copy" onclick="copyResult()">📋 Copier</button>
+      </div>
+    </div>`;
+  }
+
+  app.innerHTML = html;
+
+  // Bind inputs
+  const nameInput = document.getElementById("clientName");
+  if (nameInput) nameInput.addEventListener("input", e => { state.clientName = e.target.value; });
+  const notesInput = document.getElementById("notes");
+  if (notesInput) notesInput.addEventListener("input", e => { state.notes = e.target.value; });
+}
+
+// ===== ACTIONS =====
+function resetAll() {
+  state.step = 0; state.clientName = ""; state.segment = null;
+  state.urgency = []; state.appetite = []; state.engagement = [];
+  state.multipliers = []; state.labProfile = null; state.notes = "";
+  state.webhookStatus = null;
+  render();
+}
+
+function saveWebhook() {
+  const input = document.getElementById("webhookUrl");
+  state.webhookUrl = input.value.trim();
+  localStorage.setItem("nb_webhook_url", state.webhookUrl);
+  render();
+}
+
+function copyResult() {
+  const seg = SEGMENTS.find(s => s.id === state.segment);
+  const prices = calcPriceRange();
+  const { total, max } = calcScores();
+  const mult = calcMultiplier();
+  const confLevel = total >= 18 ? "Très élevée" : total >= 12 ? "Élevée" : total >= 6 ? "Moyenne" : "Faible";
+
+  const text = `NB NEXT STEP — Pricing
+${"═".repeat(32)}
+Client: ${state.clientName}
+Segment: ${seg.label} (${seg.caRange})
+Date: ${new Date().toLocaleDateString("fr-FR")}
+${"─".repeat(32)}
+Score entretien: ${total}/${max}
+Multiplicateur: ×${mult.toFixed(2)}
+Profil LAB: ${state.labProfile ? LAB_PROFILES.find(l => l.id === state.labProfile).label : "—"}
+Confiance: ${confLevel}
+${"─".repeat(32)}
+Fourchette basse: ${formatPrice(prices.low)} HT
+▶ PRIX CIBLE: ${formatPrice(prices.target)} HT
+Fourchette haute: ${formatPrice(prices.high)} HT
+${"─".repeat(32)}
+${state.notes ? `Notes: ${state.notes}\n` : ""}`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(".btn-copy");
+    const orig = btn.innerHTML;
+    btn.innerHTML = "✅ Copié !";
+    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  });
+}
+
+async function sendToNotion() {
+  if (!state.webhookUrl) return;
+
+  const statusEl = document.getElementById("webhookStatus");
+  statusEl.innerHTML = `<div class="webhook-status loading">⏳ Envoi en cours...</div>`;
+
+  const seg = SEGMENTS.find(s => s.id === state.segment);
+  const prices = calcPriceRange();
+  const { urgencyScore, appetiteScore, engagementScore, total, max } = calcScores();
+  const mult = calcMultiplier();
+  const confLevel = total >= 18 ? "Très élevée" : total >= 12 ? "Élevée" : total >= 6 ? "Moyenne" : "Faible";
+
+  const payload = {
+    client: state.clientName,
+    segment: seg.label,
+    segment_ca: seg.caRange,
+    date: new Date().toISOString(),
+    score_urgence: urgencyScore,
+    score_appetence: appetiteScore,
+    score_engagement: engagementScore,
+    score_total: total,
+    score_max: max,
+    multiplicateur: parseFloat(mult.toFixed(2)),
+    profil_lab: state.labProfile ? LAB_PROFILES.find(l => l.id === state.labProfile).label : "",
+    prix_bas: prices.low,
+    prix_cible: prices.target,
+    prix_haut: prices.high,
+    confiance: confLevel,
+    notes: state.notes,
+    signaux_urgence: state.urgency.map(id => URGENCY_SIGNALS.find(s => s.id === id)?.label).join(", "),
+    signaux_appetence: state.appetite.map(id => APPETITE_SIGNALS.find(s => s.id === id)?.label).join(", "),
+    signaux_engagement: state.engagement.map(id => ENGAGEMENT_SIGNALS.find(s => s.id === id)?.label).join(", "),
+    multiplicateurs_actifs: state.multipliers.map(id => MULTIPLIERS.find(m => m.id === id)?.label).join(", "),
+  };
+
+  try {
+    const resp = await fetch(state.webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (resp.ok) {
+      statusEl.innerHTML = `<div class="webhook-status success">✅ Envoyé avec succès vers Notion !</div>`;
+    } else {
+      statusEl.innerHTML = `<div class="webhook-status error">❌ Erreur ${resp.status} — Vérifiez votre webhook Make</div>`;
+    }
+  } catch (err) {
+    statusEl.innerHTML = `<div class="webhook-status error">❌ Erreur réseau — Vérifiez votre connexion</div>`;
+  }
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
