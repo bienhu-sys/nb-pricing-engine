@@ -662,6 +662,7 @@ function render() {
         <button class="btn btn-secondary" onclick="state.step=0;render()">← Modifier</button>
         <button class="btn btn-secondary" onclick="resetAll()">🔄 Nouveau</button>
         <button class="btn btn-copy" onclick="copyResult()">📋 Copier</button>
+        <button class="btn" style="background:linear-gradient(135deg,#c9a96e,#d4b87a);color:#0a1628;font-weight:700;flex:1" onclick="openProposalGenerator()">📄 Générer Proposition</button>
       </div>
     </div>`;
   }
@@ -721,6 +722,19 @@ ${state.notes ? `Notes: ${state.notes}\n` : ""}`;
     btn.innerHTML = "✅ Copié !";
     setTimeout(() => { btn.innerHTML = orig; }, 1500);
   });
+}
+
+function openProposalGenerator() {
+  const seg = SEGMENTS.find(s => s.id === state.segment);
+  const prices = calcPriceRange();
+  const params = new URLSearchParams({
+    client: state.clientName,
+    price: prices.target,
+    segment: seg.label,
+  });
+  // Update this URL to your deployed proposal generator
+  const baseUrl = localStorage.getItem("nb_proposal_url") || "./nb-proposal-generator.html";
+  window.open(baseUrl + "?" + params.toString(), "_blank");
 }
 
 async function sendToNotion() {
