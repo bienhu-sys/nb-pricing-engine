@@ -910,6 +910,31 @@ window.addEventListener('load', function() {
 });
 
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script>
+// Robust jsPDF loader with multiple CDN fallbacks
+(function(){
+  var cdns = [
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js',
+    'https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js'
+  ];
+  var idx = 0;
+  function tryLoad(){
+    if(idx >= cdns.length){
+      document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center;color:#f43f5e"><h2>Erreur de chargement</h2><p style="color:#94a3b8;margin-top:12px">Impossible de charger la librairie PDF. Vérifiez votre connexion internet.</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#c9a96e;color:#0a1628;border:none;border-radius:10px;font-family:inherit;font-size:14px;cursor:pointer">Recharger</button></div>';
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = cdns[idx];
+    s.onload = function(){
+      if(window.jspdf){ console.log('jsPDF loaded from CDN '+idx); }
+      else { idx++; tryLoad(); }
+    };
+    s.onerror = function(){ idx++; tryLoad(); };
+    document.body.appendChild(s);
+  }
+  tryLoad();
+})();
+</script>
 </body>
 </html>
